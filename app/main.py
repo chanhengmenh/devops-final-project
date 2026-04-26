@@ -40,4 +40,4 @@ def create_order(order: Order):
 
 @app.get("/grades")
 def get_grades():
-    return {"grades": [{"student": "Alice", "score": 95}, {"student": "Bob", "score": 82}]}
+    return {"grades": [{"student": "Chanheng Menh", "score": 95}, {"student": "Seima heav", "score": 93}]}
