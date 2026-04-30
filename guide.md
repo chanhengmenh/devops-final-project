@@ -1,4 +1,4 @@
-# DevOps Final Project — Step-by-Step Execution Guide
+# DevOps Final Project — Step-by-Step Execution Guide (Student Management API)
 
 Follow this guide **in order**. Each section tells you exactly what to do, what to verify, and what can go wrong.
 
@@ -6,7 +6,7 @@ Follow this guide **in order**. Each section tells you exactly what to do, what 
 
 ## Table of Contents
 
-1. [Prerequisites & Local Tools](#1-prerequisites--local-tools)
+1. [Prerequisites &amp; Local Tools](#1-prerequisites--local-tools)
 2. [GitHub Repository Setup](#2-github-repository-setup)
 3. [Branch Protection Rules](#3-branch-protection-rules)
 4. [Feature Branch + Pull Request + Merge Conflict](#4-feature-branch--pull-request--merge-conflict)
@@ -20,7 +20,7 @@ Follow this guide **in order**. Each section tells you exactly what to do, what 
 12. [Verify Deployment](#12-verify-deployment)
 13. [Grafana Dashboards](#13-grafana-dashboards)
 14. [Screenshot Checklist](#14-screenshot-checklist)
-15. [Common Errors & Fixes](#15-common-errors--fixes)
+15. [Common Errors &amp; Fixes](#15-common-errors--fixes)
 
 ---
 
@@ -28,12 +28,12 @@ Follow this guide **in order**. Each section tells you exactly what to do, what 
 
 ### What you need installed on your laptop
 
-| Tool | Version check | Install if missing |
-|------|---------------|-------------------|
-| Git | `git --version` | https://git-scm.com |
-| Docker Desktop | `docker version` | https://docker.com |
-| AWS CLI | `aws --version` | https://aws.amazon.com/cli |
-| Terraform | `terraform version` | https://developer.hashicorp.com/terraform/install |
+| Tool           | Version check         | Install if missing                                |
+| -------------- | --------------------- | ------------------------------------------------- |
+| Git            | `git --version`     | https://git-scm.com                               |
+| Docker Desktop | `docker version`    | https://docker.com                                |
+| AWS CLI        | `aws --version`     | https://aws.amazon.com/cli                        |
+| Terraform      | `terraform version` | https://developer.hashicorp.com/terraform/install |
 
 ### AWS account setup
 
@@ -84,6 +84,7 @@ git push origin main
 ```
 
 **Edge case:** Push is rejected because main is already protected.
+
 - Go to GitHub → Settings → Branches → temporarily disable branch protection
 - Push the files
 - Re-enable branch protection (Section 3)
@@ -127,32 +128,41 @@ This section produces screenshots **a, b, and c**.
 ```bash
 git checkout main
 git pull origin main
-git checkout -b feature/grading-api
+git checkout -b feature/student-gpa-status
 ```
 
 Open `app/main.py` and add this endpoint at the bottom:
 
 ```python
-# Grading API
-@app.get("/grades")
-def get_grades():
-    return {"grades": [{"student": "Alice", "score": 95}, {"student": "Bob", "score": 82}]}
+@app.get("/students/{student_id}/gpa-status", summary="Check a student's GPA standing")
+def gpa_status(student_id: int):
+    student = students_db.get(student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    gpa = student["gpa"]
+    if gpa >= 3.5:
+        standing = "Dean's List"
+    elif gpa >= 2.0:
+        standing = "Good Standing"
+    else:
+        standing = "Academic Probation"
+    return {"id": student_id, "gpa": gpa, "standing": standing}
 ```
 
 ```bash
 git add app/main.py
-git commit -m "add grading API endpoint"
-git push origin feature/grading-api
+git commit -m "add student GPA status endpoint"
+git push origin feature/student-gpa-status
 ```
 
 Go to GitHub → your repo → you will see a banner "Compare & pull request".
 
 1. Click **Compare & pull request**
-2. Title: `Add grading API endpoint`
+2. Title: `Add student GPA status endpoint`
 3. Assign a reviewer (add a classmate as a collaborator under Settings → Collaborators, or use your second GitHub account)
 4. Click **Create pull request**
 
-**Screenshot a:** Take a screenshot of the GitHub PR page showing the open PR, the branch `feature/grading-api`, and the reviewer assigned.
+**Screenshot a:** Take a screenshot of the GitHub PR page showing the open PR, the branch `feature/student-gpa-status`, and the reviewer assigned.
 
 ### Step 4.2 — Reviewer approves
 
@@ -176,25 +186,25 @@ Edit the root endpoint in `app/main.py`:
 
 ```python
 # Change this line:
-return {"message": "FoodExpress API is running"}
+return {"message": "Student Management API is running"}
 # To:
-return {"message": "FoodExpress Learning Platform API v2"}
+return {"message": "Student Management API v2 - AUPP"}
 ```
 
 ```bash
 git add app/main.py
-git commit -m "update root message for learning platform"
+git commit -m "update root message to v2"
 git push origin feature/update-root-message
 ```
 
 Open a second PR for this branch and merge it **first** (approve it yourself or have the reviewer approve it, then merge it to main).
 
-Now go back to the `feature/grading-api` PR. GitHub will show: **"This branch has conflicts that must be resolved"**.
+Now go back to the `feature/student-gpa-status` PR. GitHub will show: **"This branch has conflicts that must be resolved"**.
 
 **Resolve the conflict locally:**
 
 ```bash
-git checkout feature/grading-api
+git checkout feature/student-gpa-status
 git pull origin main        # this triggers the conflict
 ```
 
@@ -202,24 +212,24 @@ Git will show a conflict in `app/main.py`. Open the file — you will see:
 
 ```
 <<<<<<< HEAD
-return {"message": "FoodExpress Learning Platform API v2"}
+return {"message": "Student Management API v2 - AUPP"}
 =======
-return {"message": "FoodExpress API is running"}
->>>>>>> feature/grading-api
+return {"message": "Student Management API is running"}
+>>>>>>> feature/student-gpa-status
 ```
 
 Edit the file to keep BOTH changes correctly:
 
 ```python
-return {"message": "FoodExpress Learning Platform API v2"}
+return {"message": "Student Management API v2 - AUPP"}
 ```
 
-(Keep the updated message AND keep the grading endpoint below it.)
+(Keep the updated message AND keep the GPA status endpoint below it.)
 
 ```bash
 git add app/main.py
-git commit -m "resolve merge conflict - keep updated root message and grading API"
-git push origin feature/grading-api
+git commit -m "resolve merge conflict - keep v2 root message and gpa-status endpoint"
+git push origin feature/student-gpa-status
 ```
 
 The PR on GitHub will now show the conflict is resolved. Reviewer re-approves. Merge the PR.
@@ -377,6 +387,7 @@ Go to **Manage Jenkins → Credentials → System → Global credentials → Add
 - Description: Docker Hub
 
 **How to create a Docker Hub access token (preferred over password):**
+
 - Docker Hub → Account Settings → Security → New Access Token → name it `jenkins` → copy the token
 - Use the token as the password above
 
@@ -454,6 +465,7 @@ Before the full success run, demonstrate that the pipeline can fail at SonarQube
 Now trigger a pipeline run (click **Build Now** in Jenkins).
 
 The pipeline will:
+
 - Pass Stage 1 (Checkout) ✓
 - Pass Stage 2 (SonarQube Scan) ✓
 - **Fail Stage 3 (Quality Gate)** ✗ — pipeline aborts here
@@ -463,6 +475,7 @@ The pipeline will:
 ### Reset the quality gate to default
 
 After the screenshot:
+
 1. SonarQube → Projects → devops-final-project → Project Settings → Quality Gate → select `Sonar way` (the default)
 2. This allows the pipeline to pass in the next run
 
@@ -523,17 +536,17 @@ Watch the **Stage View** in real time.
 
 ### Stage-by-stage expected behavior
 
-| Stage | Expected duration | Success indicator |
-|-------|------------------|-------------------|
-| Checkout | ~5s | Clones repo |
-| SonarQube Scan | ~30–60s | "ANALYSIS SUCCESSFUL" in log |
-| Quality Gate | ~10–30s | "Quality gate status: OK" |
-| Build Docker Image | ~60–120s | "Successfully built" and "Successfully tagged" |
-| Trivy Security Scan | ~60–120s | Table printed, no CRITICAL exit |
-| Push Image | ~30s | "latest: digest: sha256:..." |
-| Provision EC2 | ~60–120s | "Apply complete! Resources: 2 added" |
-| Deploy App | ~60–180s | Includes SSH retry loop; "foodapp" container started |
-| Deploy Monitoring | ~30–60s | `docker compose up -d` shows containers |
+| Stage               | Expected duration | Success indicator                                    |
+| ------------------- | ----------------- | ---------------------------------------------------- |
+| Checkout            | ~5s               | Clones repo                                          |
+| SonarQube Scan      | ~30–60s          | "ANALYSIS SUCCESSFUL" in log                         |
+| Quality Gate        | ~10–30s          | "Quality gate status: OK"                            |
+| Build Docker Image  | ~60–120s         | "Successfully built" and "Successfully tagged"       |
+| Trivy Security Scan | ~60–120s         | Table printed, no CRITICAL exit                      |
+| Push Image          | ~30s              | "latest: digest: sha256:..."                         |
+| Provision EC2       | ~60–120s         | "Apply complete! Resources: 2 added"                 |
+| Deploy App          | ~60–180s         | Includes SSH retry loop; "foodapp" container started |
+| Deploy Monitoring   | ~30–60s          | `docker compose up -d` shows containers            |
 
 **Edge case — Stage 7 (Provision EC2) fails: "Error: creating Security Group: InvalidGroup.Duplicate"**
 
@@ -593,15 +606,53 @@ terraform output public_ip
 
 Open: `http://<EC2-PUBLIC-IP>:8000`
 
-Expected: `{"message": "FoodExpress Learning Platform API v2"}`
+Expected: `{"message": "Student Management API v2 - AUPP"}`
 
-Also test the API docs: `http://<EC2-PUBLIC-IP>:8000/docs` — Swagger UI should load.
+Also test the API docs (Swagger UI): `http://<EC2-PUBLIC-IP>:8000/docs`
 
 Test the health check: `http://<EC2-PUBLIC-IP>:8000/health`
 
 Expected: `{"status": "ok"}`
 
-**Screenshot k:** Take a screenshot of your **laptop browser** showing `http://<EC2-PUBLIC-IP>:8000` with the JSON response, and/or the Swagger UI at `/docs`.
+### Test the Student CRUD endpoints
+
+```bash
+EC2_IP=<EC2-PUBLIC-IP>
+
+# Create students
+curl -s -X POST http://$EC2_IP:8000/students \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice","email":"alice@aupp.edu","major":"Computer Science","gpa":3.9,"year":2}'
+
+curl -s -X POST http://$EC2_IP:8000/students \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Bob","email":"bob@aupp.edu","major":"Business","gpa":2.8,"year":3}'
+
+# List all students
+curl -s http://$EC2_IP:8000/students
+
+# Filter by major
+curl -s "http://$EC2_IP:8000/students?major=Computer+Science"
+
+# Filter by min GPA
+curl -s "http://$EC2_IP:8000/students?min_gpa=3.5"
+
+# Get one student
+curl -s http://$EC2_IP:8000/students/1
+
+# GPA status
+curl -s http://$EC2_IP:8000/students/1/gpa-status
+
+# Partial update
+curl -s -X PATCH http://$EC2_IP:8000/students/2 \
+  -H "Content-Type: application/json" \
+  -d '{"gpa":3.2}'
+
+# Delete one student
+curl -s -X DELETE http://$EC2_IP:8000/students/1
+```
+
+**Screenshot k:** Take a screenshot of your **laptop browser** showing `http://<EC2-PUBLIC-IP>:8000/docs` (Swagger UI listing all student endpoints), and/or a curl response in the terminal.
 
 **Edge case — browser shows "This site can't be reached":**
 
@@ -610,8 +661,8 @@ Expected: `{"status": "ok"}`
 3. Check the container is running on EC2:
    ```bash
    ssh -i devops-key.pem ubuntu@<EC2-IP>
-   docker ps   # should show foodapp container
-   docker logs foodapp   # check for startup errors
+   docker ps   # should show the app container
+   docker logs <container-name>   # check for startup errors
    ```
 
 ---
@@ -626,13 +677,13 @@ Open: `http://<EC2-PUBLIC-IP>:9090`
 
 Go to **Status → Targets** — you should see three targets:
 
-| Target | Status |
-|--------|--------|
-| `prometheus:9090` | UP |
-| `node-exporter:9100` | UP |
-| `172.17.0.1:8000` | UP |
+| Target                   | Status |
+| ------------------------ | ------ |
+| `prometheus:9090`      | UP     |
+| `node-exporter:9100`   | UP     |
+| `172.17.0.1:8000`      | UP     |
 
-**Edge case — foodexpress-api target is DOWN:**
+**Edge case — student-api target is DOWN:**
 
 The `prometheus.yml` scrapes `172.17.0.1:8000` (the Docker bridge gateway IP). This is the default Docker bridge but may differ on your EC2. SSH in and check:
 
@@ -669,12 +720,21 @@ You should see CPU, memory, disk, and network graphs for the EC2 instance.
 To generate some traffic so the graphs show data:
 
 ```bash
-# From your laptop
-for i in {1..20}; do curl http://<EC2-PUBLIC-IP>:8000/orders; done
-for i in {1..5}; do
-  curl -X POST http://<EC2-PUBLIC-IP>:8000/orders \
-    -H "Content-Type: application/json" \
-    -d '{"item":"Pizza","quantity":2,"price":12.5}'
+EC2_IP=<EC2-PUBLIC-IP>
+
+# Seed two students
+curl -s -X POST http://$EC2_IP:8000/students \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice","email":"alice@aupp.edu","major":"CS","gpa":3.9,"year":2}'
+curl -s -X POST http://$EC2_IP:8000/students \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Bob","email":"bob@aupp.edu","major":"Business","gpa":2.8,"year":3}'
+
+# Generate repeated GET traffic
+for i in {1..30}; do
+  curl -s http://$EC2_IP:8000/students > /dev/null
+  curl -s http://$EC2_IP:8000/students/1/gpa-status > /dev/null
+  curl -s http://$EC2_IP:8000/health > /dev/null
 done
 ```
 
@@ -686,20 +746,20 @@ Wait ~30 seconds for Prometheus to scrape, then refresh the Grafana dashboard.
 
 ## 14. Screenshot Checklist
 
-| # | Screenshot | How to get it | Done |
-|---|-----------|---------------|------|
-| a | GitHub Branches + Pull Request | GitHub → your repo → Pull requests → open PR page | [ ] |
-| b | Reviewer Approve | GitHub → PR → show the green "Approved" review by reviewer | [ ] |
-| c | Merge Conflict + Resolution | Terminal showing conflict markers OR GitHub conflict editor, then the resolved commit | [ ] |
-| d | Full Jenkinsfile script | Open `Jenkinsfile` in editor + full scroll, or GitHub repo file view | [ ] |
-| e | SonarQube report | SonarQube → Projects → devops-final-project → Overview page | [ ] |
-| f | Trivy scan result | Jenkins console log → Stage 5 (Trivy Security Scan) output table | [ ] |
-| g | Pipeline termination on quality fail | Jenkins Stage View with Stage 3 (Quality Gate) red/failed | [ ] |
-| h | Terraform apply output | Jenkins console log → Stage 7 (Provision EC2) → "Apply complete!" | [ ] |
-| i | Continuous Deployment stage | Jenkins console log → Stage 8 (Deploy App) → docker run output | [ ] |
-| j | Pipeline success (graphical view) | Jenkins → job page → Stage View with all 9 stages green | [ ] |
-| k | App running from laptop browser | Browser at `http://<EC2-IP>:8000` showing JSON or `/docs` Swagger | [ ] |
-| l | Grafana dashboard | Grafana at `http://<EC2-IP>:3000` showing a live dashboard with data | [ ] |
+| # | Screenshot                           | How to get it                                                                         | Done |
+| - | ------------------------------------ | ------------------------------------------------------------------------------------- | ---- |
+| a | GitHub Branches + Pull Request       | GitHub → your repo → Pull requests → open PR page                                  | [ ]  |
+| b | Reviewer Approve                     | GitHub → PR → show the green "Approved" review by reviewer                          | [ ]  |
+| c | Merge Conflict + Resolution          | Terminal showing conflict markers OR GitHub conflict editor, then the resolved commit | [ ]  |
+| d | Full Jenkinsfile script              | Open `Jenkinsfile` in editor + full scroll, or GitHub repo file view                | [ ]  |
+| e | SonarQube report                     | SonarQube → Projects → devops-final-project → Overview page                        | [ ]  |
+| f | Trivy scan result                    | Jenkins console log → Stage 5 (Trivy Security Scan) output table                     | [ ]  |
+| g | Pipeline termination on quality fail | Jenkins Stage View with Stage 3 (Quality Gate) red/failed                             | [ ]  |
+| h | Terraform apply output               | Jenkins console log → Stage 7 (Provision EC2) → "Apply complete!"                   | [ ]  |
+| i | Continuous Deployment stage          | Jenkins console log → Stage 8 (Deploy App) → docker run output                      | [ ]  |
+| j | Pipeline success (graphical view)    | Jenkins → job page → Stage View with all 9 stages green                             | [ ]  |
+| k | App running from laptop browser      | Browser at `http://<EC2-IP>:8000` showing JSON or `/docs` Swagger                 | [ ]  |
+| l | Grafana dashboard                    | Grafana at `http://<EC2-IP>:3000` showing a live dashboard with data                | [ ]  |
 
 ---
 
