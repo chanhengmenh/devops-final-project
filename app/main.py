@@ -121,3 +121,18 @@ def gpa_status(student_id: int):
     else:
         standing = "Academic Probation"
     return {"id": student_id, "gpa": gpa, "standing": standing}
+
+
+@app.get("/students/{student_id}/gpa-status", summary="Check a student's GPA standing")
+def gpa_status(student_id: int):
+    student = students_db.get(student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    gpa = student["gpa"]
+    if gpa >= 3.5:
+        standing = "Dean's List"
+    elif gpa >= 2.0:
+        standing = "Good Standing"
+    else:
+        standing = "Academic Probation"
+    return {"id": student_id, "gpa": gpa, "standing": standing}
