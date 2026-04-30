@@ -3,7 +3,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-app = FastAPI(title="Student Management API")
+app = FastAPI(title="Student Management API", version="2.0.0", description="AUPP Student CRUD System")
 
 Instrumentator().instrument(app).expose(app)
 
