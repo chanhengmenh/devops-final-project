@@ -36,7 +36,7 @@ def _next_student_id() -> int:
 
 @app.get("/")
 def root():
-    return {"message": "Student Management API is running"}
+    return {"message": "Student Management API v2 - AUPP"}
 
 
 @app.get("/health")
