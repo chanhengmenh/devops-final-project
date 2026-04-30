@@ -6,7 +6,8 @@ Follow this guide **in order**. Each section tells you exactly what to do, what 
 
 ## Table of Contents
 
-1. [Prerequisites &amp; Local Tools](#1-prerequisites--local-tools)
+0. [Secrets & Configuration Reference](#0-secrets--configuration-reference)
+1. [Prerequisites & Local Tools](#1-prerequisites--local-tools)
 2. [GitHub Repository Setup](#2-github-repository-setup)
 3. [Branch Protection Rules](#3-branch-protection-rules)
 4. [Feature Branch + Pull Request + Merge Conflict](#4-feature-branch--pull-request--merge-conflict)
@@ -20,7 +21,115 @@ Follow this guide **in order**. Each section tells you exactly what to do, what 
 12. [Verify Deployment](#12-verify-deployment)
 13. [Grafana Dashboards](#13-grafana-dashboards)
 14. [Screenshot Checklist](#14-screenshot-checklist)
-15. [Common Errors &amp; Fixes](#15-common-errors--fixes)
+15. [Common Errors & Fixes](#15-common-errors--fixes)
+
+---
+
+## 0. Secrets & Configuration Reference
+
+Collect everything in this section **before** you touch any tool. Nothing in this project uses environment files — all secrets are entered manually into Jenkins, AWS, SonarQube, and GitHub.
+
+---
+
+### Quick checklist — have these ready before Section 5
+
+```
+[ ] AWS Access Key ID + Secret Access Key   →  Jenkins credential: aws-credentials
+[ ] devops-key.pem (EC2 private key)        →  Jenkins credential: ec2-key
+[ ] Docker Hub password or access token     →  Jenkins credential: dockerhub-creds
+[ ] SonarQube token                         →  Jenkins SonarQube server config: sonar-token
+[ ] SonarQube webhook URL                   →  SonarQube → Administration → Webhooks
+[ ] EC2 key pair named exactly "devops-key" →  AWS Console → EC2 → Key Pairs
+[ ] GitHub webhook pointing to Jenkins      →  GitHub repo → Settings → Webhooks
+```
+
+---
+
+### 0.1 Jenkins Credentials
+Set in **Manage Jenkins → Credentials → System → Global credentials → Add Credential**
+
+| Credential ID | Kind | What to enter |
+|---|---|---|
+| `dockerhub-creds` | Username with password | Username: `chanhengmenh` / Password: Docker Hub access token (see 0.3) |
+| `ec2-key` | SSH Username with private key | Username: `ubuntu` / Key: full contents of `devops-key.pem` |
+| `aws-credentials` | AWS Credentials | Your AWS Access Key ID + AWS Secret Access Key (see 0.2) |
+
+---
+
+### 0.2 AWS — Values to Collect Once
+
+| Item | Where to get it | Notes |
+|---|---|---|
+| Access Key ID | AWS Console → IAM → Users → your user → Security credentials → Create access key | Type: "Application running outside AWS" |
+| Secret Access Key | Same creation step — copy immediately, shown only once | Paste into Jenkins `aws-credentials` |
+| EC2 Key Pair | AWS Console → EC2 → Key Pairs → Create key pair | Name **must** be `devops-key`, type RSA, format `.pem`. Download and save — AWS shows it only once |
+| IAM permission | AWS Console → IAM → Users → your user → Permissions | Needs `AmazonEC2FullAccess` |
+| Region | Hardcoded in `terraform/main.tf` line 12 | `ap-southeast-1` (Singapore) — change here if you want a different region |
+
+---
+
+### 0.3 Docker Hub
+
+| Item | Value / Action |
+|---|---|
+| Username | `chanhengmenh` — hardcoded in `Jenkinsfile` as `IMAGE = "chanhengmenh/devops-final-project:latest"` |
+| Access token | Docker Hub → top-right avatar → Account Settings → Security → New Access Token → name it `jenkins` → copy |
+| If your username differs | Edit `Jenkinsfile` line 5: change `chanhengmenh` to your username |
+
+---
+
+### 0.4 SonarQube
+
+| Item | Where | Value |
+|---|---|---|
+| Admin password | SonarQube first login prompt | Change from `admin` to something you remember, e.g. `Admin@1234` |
+| Project key | `sonar-project.properties` line 1 | `devops-final-project` — already set, do not change |
+| Host URL | `sonar-project.properties` line 5 | `http://localhost:9000` — update only if SonarQube runs on a different host |
+| Token | SonarQube UI → Projects → devops-final-project → Set up locally → Generate token | Copy and paste into Jenkins SonarQube server config as ID `sonar-token` |
+| Jenkins name (in Jenkins config) | Manage Jenkins → System → SonarQube servers → Name | Must be exactly `SonarQube` — the Jenkinsfile references this name |
+| Webhook (required for Quality Gate) | SonarQube → Administration → Configuration → Webhooks → Create | Name: `Jenkins` / URL: `http://<JENKINS-EC2-IP>:8080/sonarqube-webhook/` |
+
+> Without the SonarQube webhook, the pipeline will hang at the Quality Gate step for 5 minutes and then time out.
+
+---
+
+### 0.5 Grafana
+
+| Item | Where | Value |
+|---|---|---|
+| Admin password | `monitoring/docker-compose.yml` → `GF_SECURITY_ADMIN_PASSWORD` | Currently `admin` — edit this line before deploying if you want a stronger password |
+| Login | Browser at `http://<EC2-IP>:3000` | `admin` / `admin` (or whatever you set above) |
+
+---
+
+### 0.6 GitHub Webhook
+
+| Field | Value |
+|---|---|
+| Payload URL | `http://<JENKINS-EC2-PUBLIC-IP>:8080/github-webhook/` |
+| Content type | `application/json` |
+| Which events | Just the **push** event |
+
+> The webhook is only needed for auto-triggering Jenkins on push. You can skip it and use **Build Now** manually instead.
+
+---
+
+### 0.7 Files That Must Never Be Committed
+
+| File | Why |
+|---|---|
+| `devops-final-project.pem` | EC2 private key — already in your local folder |
+| `terraform/terraform.tfstate` | Contains resource IDs and may contain secrets |
+| `terraform/terraform.tfstate.backup` | Same reason |
+
+Add these to `.gitignore` if not already there:
+
+```
+*.pem
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+```
 
 ---
 
