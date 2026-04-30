@@ -11,6 +11,8 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   node-exporter:
     image: prom/node-exporter:latest

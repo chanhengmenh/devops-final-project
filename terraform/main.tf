@@ -12,7 +12,7 @@ provider "aws" {
 }
 
 resource "aws_security_group" "web_sg" {
-  name        = "web_sg"
+  name        = "web_sg_v2"
   description = "Allow app, monitoring, and SSH traffic"
 
   ingress {
@@ -103,6 +103,12 @@ resource "aws_instance" "app" {
     usermod -aG docker ubuntu
     systemctl enable docker
     systemctl start docker
+    docker pull chanhengmenh/devops-final-project:latest
+    docker run -d \
+      --name foodapp \
+      --restart always \
+      -p 8000:8000 \
+      chanhengmenh/devops-final-project:latest
   EOF
 
   tags = {
